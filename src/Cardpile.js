@@ -1,41 +1,60 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Card from './Card';
 import axios from 'axios';
 
 function Cardpile() {
+    const timerId = useRef();
     const [cards, setCards] = useState([]);
     const [deckId, setDeckId] = useState(null);
     const [cardCounter, setCardCounter] = useState(0);
+    const [isDrawing, setIsDrawing] = useState(false)
 
     let cardsDisplay = cards.map(card =>
         <Card key={card.name} style={card.style} src={card.src} name={card.name} />
     );
 
+    const handleClick = () => {
+        isDrawing ? setIsDrawing(false) : setIsDrawing(true);
+    }
+
     useEffect(() => {
         const getCard = async () => {
-            let resp = await axios.get(`https://deckofcardsapi.com/api/deck/${deckId}/draw/?count=1`);
 
-            const rotate = 45 - (Math.floor(Math.random() * 90));
-            const translateX = 40 - (Math.floor(Math.random() * 80));
-            const translateY = 40 - (Math.floor(Math.random() * 80));
+            try {
+                let resp = await axios.get(`https://deckofcardsapi.com/api/deck/${deckId}/draw/?count=1`);
 
-            const newCard = {
-                src: resp.data.cards[0].image,
-                name: resp.data.cards[0].code,
-                style: {
-                    position: "absolute",
-                    top: "150px",
-                    transform: `rotate(${rotate}deg) translate(${translateX}px, ${translateY}px)`
+                const rotate = 45 - (Math.floor(Math.random() * 90));
+                const translateX = 40 - (Math.floor(Math.random() * 80));
+                const translateY = 40 - (Math.floor(Math.random() * 80));
+
+                const newCard = {
+                    src: resp.data.cards[0].image,
+                    name: resp.data.cards[0].code,
+                    style: {
+                        position: "absolute",
+                        top: "150px",
+                        transform: `rotate(${rotate}deg) translate(${translateX}px, ${translateY}px)`
+                    }
                 }
+
+                setCards(drawCards => [...drawCards, newCard]);
+
+            } catch (err) {
+                clearInterval(timerId.current);
             }
-
-            setCards(drawCards => [...drawCards, newCard]);
-
         }
-        if (deckId) {
-            getCard();
+
+        if (deckId && isDrawing) {
+            timerId.current = setInterval(() => {
+                getCard()
+            }, 100)
         }
-    }, [cardCounter]
+
+        return () => {
+            clearInterval(timerId.current);
+        }
+
+    }, [isDrawing]
     );
 
     useEffect(() => {
@@ -48,7 +67,9 @@ function Cardpile() {
 
     return (
         <div style={{ position: "relative" }}>
-            {(cardCounter < 52) ? <button onClick={() => setCardCounter(card => card + 1)}>GIMME A CARD BETCH!</button> : ""}
+
+            <button onClick={handleClick}>{(isDrawing) ? "STAAHP NO MORE" : "GIMME A CARD BETCH!"}</button>
+
             <div>
                 {cardsDisplay}
             </div>
